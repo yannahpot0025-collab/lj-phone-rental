@@ -1,0 +1,115 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#17172f">
+<title>LJ Phone Rental</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f4fa;color:#20243a}
+header{background:#17172f;color:white;padding:22px 18px}
+header h1{margin:0;font-size:23px}
+nav{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+nav button{background:#30304f;color:white;border:0;padding:12px;border-radius:10px}
+main{padding:18px;max-width:800px;margin:auto}
+.card{background:white;padding:18px;border-radius:18px;margin-bottom:16px;box-shadow:0 3px 15px #0000000a}
+h2{font-size:21px}
+label{display:block;margin:12px 0 6px}
+input,select{width:100%;padding:13px;border:1px solid #ddd;border-radius:9px;font-size:16px}
+button.primary{background:#5b48df;color:white;border:0;border-radius:10px;padding:13px 17px;font-size:16px;margin-top:12px}
+button.secondary{background:#e9e8f8;color:#252344;border:0;border-radius:9px;padding:11px;margin:5px 3px 0 0}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:white;padding:16px;border-radius:15px}
+.stat strong{display:block;font-size:27px;margin:8px 0}
+#timer{font-size:38px;font-weight:bold;text-align:center;padding:16px}
+small{color:#73798a}
+</style>
+</head>
+<body>
+<header>
+<h1>◇ LJ Phone Rental</h1>
+<nav>
+<button onclick="show('overview')">Overview</button>
+<button onclick="show('rentals')">Rentals</button>
+<button onclick="show('settings')">Settings</button>
+</nav>
+</header>
+<main>
+<section id="overview">
+<h2>Phone Rental Management</h2>
+<p>Manage rental time and records.</p>
+<div class="stats">
+<div class="stat">Registered phones<strong id="phones">1</strong><small>Demo inventory</small></div>
+<div class="stat">Active rentals<strong id="active">0</strong></div>
+<div class="stat">Rental records<strong id="records">0</strong></div>
+<div class="stat">Current status<strong id="status">Ready</strong></div>
+</div>
+<div class="card" style="margin-top:16px">
+<h3>Quick start</h3>
+<p>Set the customer's rental duration and start the timer.</p>
+<button class="primary" onclick="show('rentals')">＋ Start a rental</button>
+</div>
+</section>
+<section id="rentals" hidden>
+<div class="card">
+<h2>Start rental</h2>
+<label>Customer name</label>
+<input id="customer" placeholder="Enter customer name">
+<label>Rental phone</label>
+<select id="device"><option>Rental Phone 1</option><option>Rental Phone 2</option><option>Rental Tablet 1</option></select>
+<label>Paid time (minutes)</label>
+<input id="minutes" type="number" min="1" value="30">
+<button class="primary" onclick="startRental()">Start timer</button>
+<div id="timer">00:00</div>
+<p id="notice">No active rental.</p>
+<button class="secondary" onclick="addTime(5)">+5 minutes</button>
+<button class="secondary" onclick="addTime(15)">+15 minutes</button>
+<button class="secondary" onclick="addTime(30)">+30 minutes</button>
+<button class="secondary" onclick="endRental()">End rental</button>
+</div>
+<div class="card">
+<h3>Rental history</h3>
+<div id="history">No rental records yet.</div>
+</div>
+</section>
+<section id="settings" hidden>
+<div class="card">
+<h2>Admin settings</h2>
+<p>Allowed apps configuration preview</p>
+<label><input type="checkbox" checked style="width:auto"> Phone</label>
+<label><input type="checkbox" checked style="width:auto"> Camera</label>
+<label><input type="checkbox"> Games</label>
+<label><input type="checkbox"> Browser</label>
+<p><small>These selections are a demo only and do not restrict installed apps.</small></p>
+</div>
+<div class="card">
+<h3>Important limitation</h3>
+<p>This web demo cannot lock the physical phone or enforce app restrictions. A native Android kiosk application and device-management setup are required.</p>
+</div>
+</section>
+</main>
+<script>
+let remaining=0,interval=null,customerName="",deviceName="",history=[];
+function show(id){document.querySelectorAll('main section').forEach(s=>s.hidden=true);document.getElementById(id).hidden=false}
+function displayTime(){let m=Math.floor(Math.max(0,remaining)/60),s=Math.max(0,remaining)%60;document.getElementById('timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function startRental(){
+ if(remaining>0){alert('May active rental pa. Tap End rental muna.');return}
+ let mins=Number(document.getElementById('minutes').value);
+ customerName=document.getElementById('customer').value.trim()||'Walk-in customer';
+ deviceName=document.getElementById('device').value;
+ if(!Number.isFinite(mins)||mins<1){alert('Enter at least 1 minute.');return}
+ remaining=Math.floor(mins*60);document.getElementById('notice').textContent='Rental active for '+customerName+' — '+deviceName;
+ document.getElementById('status').textContent='Running';document.getElementById('active').textContent='1';
+ displayTime();clearInterval(interval);
+ interval=setInterval(()=>{remaining--;displayTime();if(remaining===60)beep();if(remaining<=0){clearInterval(interval);remaining=0;displayTime();document.getElementById('status').textContent='Expired';document.getElementById('notice').textContent='TIME EXPIRED — manually secure the device.';beep();alert('Rental time expired. This demo cannot lock the phone.');document.getElementById('active').textContent='0';saveRecord('Expired');}},1000);
+}
+function addTime(mins){if(remaining<=0){alert('No active rental.');return}remaining+=mins*60;displayTime();document.getElementById('notice').textContent='Added '+mins+' minutes.'}
+function endRental(){if(remaining<=0){alert('No active rental.');return}clearInterval(interval);remaining=0;displayTime();document.getElementById('active').textContent='0';document.getElementById('status').textContent='Ended';document.getElementById('notice').textContent='Rental ended.';saveRecord('Ended')}
+function saveRecord(result){history.unshift({name:customerName,device:deviceName,result,date:new Date().toLocaleString()});document.getElementById('records').textContent=history.length;document.getElementById('history').innerHTML=history.map(x=>'<p><b>'+escapeText(x.name)+'</b> — '+escapeText(x.device)+'<br><small>'+escapeText(x.date)+' · '+escapeText(x.result)+'</small></p>').join('')}
+function escapeText(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function beep(){try{let a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.2;o.start();setTimeout(()=>{o.stop();a.close()},700)}catch(e){}}
+</script>
+</body>
+</html>
